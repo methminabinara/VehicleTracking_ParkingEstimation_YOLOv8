@@ -43,9 +43,9 @@ while cap.isOpened():
             # Draw the bounding box
             cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-            # Put the label (class name)
+            # Put the label (class name) with increased font size
             label = model.names[class_id]
-            cv2.putText(annotated_frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            cv2.putText(annotated_frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
     # Display the annotated frame with only vehicles
     cv2.imshow('YOLOv8 Vehicle Detection (Vehicles Only)', annotated_frame)
