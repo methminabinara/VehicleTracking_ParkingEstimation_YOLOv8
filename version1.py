@@ -21,14 +21,17 @@ vehicle_classes = [2, 3, 5, 7, 9]  # Car, Motorcycle, Bus, Truck, Bicycle
 
 # Define the angled line for counting vehicles (entrance/exit line)
 line_start = (50, 300)  # Start point of the line (x1, y1)
-line_end = (300, 800)    # End point of the line (x2, y2)
+line_end = (300, 800)   # End point of the line (x2, y2)
 enter_count = 0
 exit_count = 0
+parked_count = 0
 
-# Dictionary to track vehicle positions to prevent double-counting
+# Dictionary to track vehicle positions to prevent double-counting and to track movement
 vehicle_tracker = {}
+stationary_threshold = 30  # Number of frames for a vehicle to be considered "parked"
+movement_tolerance = 5  # Tolerance for detecting movement (in pixels)
 
-# Function to check if a vehicle crosses the angled line
+# Function to check if a vehicle crosses the angled line from left to right (enter) or right to left (exit)
 def crossed_the_line(prev_pos, curr_pos, line_start, line_end):
     def is_on_opposite_sides(p1, p2):
         # Check if two points (previous and current) are on opposite sides of the line
@@ -37,6 +40,25 @@ def crossed_the_line(prev_pos, curr_pos, line_start, line_end):
         return np.sign(cross_product1) != np.sign(cross_product2)
 
     return is_on_opposite_sides(prev_pos, curr_pos)
+
+# Function to detect if the vehicle is stationary (parked)
+def is_parked(vehicle_history, threshold, tolerance):
+    if len(vehicle_history) < threshold:
+        return False
+    # Check if the last N positions are within the tolerance range (little or no movement)
+    first_pos = vehicle_history[-threshold]
+    return all(abs(p[0] - first_pos[0]) <= tolerance and abs(p[1] - first_pos[1]) <= tolerance for p in vehicle_history[-threshold:])
+
+# Function to smooth out box positions to reduce shaking
+def smooth_position(positions, alpha=0.2):
+    if len(positions) < 2:
+        return positions[-1]
+    prev_pos = positions[-2]
+    curr_pos = positions[-1]
+    # Apply exponential moving average smoothing
+    smoothed_pos = (int(alpha * curr_pos[0] + (1 - alpha) * prev_pos[0]),
+                    int(alpha * curr_pos[1] + (1 - alpha) * prev_pos[1]))
+    return smoothed_pos
 
 # Process video frame by frame
 frame_count = 0
@@ -75,32 +97,36 @@ while cap.isOpened():
             label = model.names[class_id]
             cv2.putText(annotated_frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
-            # Track the vehicle's position and detect crossing the line
+            # Track the vehicle's position and detect crossing the line or parking
             if vehicle_id in vehicle_tracker:
-                prev_pos = vehicle_tracker[vehicle_id]
-                curr_pos = (center_x, center_y)
+                vehicle_history = vehicle_tracker[vehicle_id]['history']
+                prev_pos = vehicle_history[-1]
+                curr_pos = smooth_position([(center_x, center_y)], alpha=0.5)
+                vehicle_history.append(curr_pos)
 
-                # Debug: print positions to ensure they are changing
-                print(f"Prev pos: {prev_pos}, Curr pos: {curr_pos}")
-
-                # Check if the vehicle crosses the line
+                # Check if the vehicle crosses the line (left-to-right is entering, right-to-left is exiting)
                 if crossed_the_line(prev_pos, curr_pos, line_start, line_end):
-                    # Determine if entering or leaving
-                    if curr_pos[1] > prev_pos[1]:  # Moving downward (entering)
+                    if curr_pos[0] > prev_pos[0]:  # Moving left to right (entering)
                         enter_count += 1
-                        print(f"Vehicle entered (Total enters: {enter_count})")
-                    else:  # Moving upward (leaving)
+                    elif curr_pos[0] < prev_pos[0]:  # Moving right to left (exiting)
                         exit_count += 1
-                        print(f"Vehicle exited (Total exits: {exit_count})")
 
-                # Update the tracked position
-                vehicle_tracker[vehicle_id] = curr_pos
+                # Check if the vehicle is parked (not moving for a set number of frames)
+                if not vehicle_tracker[vehicle_id]['parked'] and is_parked(vehicle_history, stationary_threshold, movement_tolerance):
+                    parked_count += 1
+                    vehicle_tracker[vehicle_id]['parked'] = True
+
             else:
                 # Initialize tracking if vehicle is new
-                vehicle_tracker[vehicle_id] = (center_x, center_y)
+                vehicle_tracker[vehicle_id] = {'history': [(center_x, center_y)], 'parked': False}
+
+    # Display entry, exit, and parked counts on the frame
+    cv2.putText(annotated_frame, f'Entries: {enter_count}', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    cv2.putText(annotated_frame, f'Exits: {exit_count}', (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    cv2.putText(annotated_frame, f'Parked: {parked_count}', (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
 
     # Display the annotated frame with only vehicles
-    cv2.imshow('YOLOv8 Vehicle Detection with Entry/Exit Counting', annotated_frame)
+    cv2.imshow('YOLOv8 Vehicle Detection with Entry/Exit Counting and Parking', annotated_frame)
 
     # Press 'q' to stop the video
     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -116,3 +142,4 @@ cv2.destroyAllWindows()
 
 print(f"Total vehicles entered: {enter_count}")
 print(f"Total vehicles exited: {exit_count}")
+print(f"Total vehicles parked: {parked_count}")
