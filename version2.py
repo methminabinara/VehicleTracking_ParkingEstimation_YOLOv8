@@ -32,13 +32,15 @@ stationary_threshold = 30  # Number of frames for a vehicle to be considered "pa
 movement_tolerance = 5  # Tolerance for detecting movement (in pixels)
 
 # Function to check if a vehicle crosses the angled line from left to right (enter) or right to left (exit)
-def crossed_the_line(prev_pos, curr_pos, line_start, line_end):
-    def is_on_opposite_sides(p1, p2):
-        cross_product1 = np.cross(np.subtract(line_end, line_start), np.subtract(p1, line_start))
-        cross_product2 = np.cross(np.subtract(line_end, line_start), np.subtract(p2, line_start))
-        return np.sign(cross_product1) != np.sign(cross_product2)
+def crossed_the_line(prev_pos, curr_pos, line_start, line_end, tolerance=10):
+    def position_side(p, line_start, line_end):
+        return np.cross(np.subtract(line_end, line_start), np.subtract(p, line_start))
 
-    return is_on_opposite_sides(prev_pos, curr_pos)
+    prev_side = position_side(prev_pos, line_start, line_end)
+    curr_side = position_side(curr_pos, line_start, line_end)
+    
+    # Check if vehicle crosses within the tolerance
+    return np.sign(prev_side) != np.sign(curr_side) and abs(curr_side - prev_side) > tolerance
 
 # Function to detect if the vehicle is stationary (parked)
 def is_parked(vehicle_history, threshold, tolerance):
@@ -80,9 +82,12 @@ while cap.isOpened():
         # Only keep vehicle detections
         if class_id in vehicle_classes:
             # Get vehicle box coordinates
-            box = result.xyxy[0].cpu().numpy()  # Coordinates of the box (x1, y1, x2, y2)
+            box = result.xyxy[0]  # Coordinates of the box (x1, y1, x2, y2)
             x1, y1, x2, y2 = map(int, box)  # Convert to int for plotting
             center_x, center_y = (x1 + x2) // 2, (y1 + y2) // 2  # Get the center point of the vehicle
+
+            # Plot the vehicle center point to help with debugging
+            cv2.circle(annotated_frame, (center_x, center_y), 5, (0, 0, 255), -1)
 
             # Vehicle ID for tracking (simple ID based on center coordinates and frame count)
             vehicle_id = f"{center_x}-{center_y}-{frame_count % 5}"

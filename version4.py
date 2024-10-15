@@ -87,8 +87,9 @@ while cap.isOpened():
             # Vehicle ID for tracking (simple ID based on center coordinates and frame count)
             vehicle_id = f"{center_x}-{center_y}-{frame_count % 5}"
 
-            # Draw the bounding box
+            # Draw the bounding box and center point
             cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.circle(annotated_frame, (center_x, center_y), 4, (0, 0, 255), -1)  # Center point
 
             # Put the label (class name) with increased font size
             label = model.names[class_id]
@@ -122,7 +123,7 @@ while cap.isOpened():
     cv2.putText(annotated_frame, f'Exits: {exit_count}', (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
     cv2.putText(annotated_frame, f'Parked: {parked_count}', (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
 
-    # Display the annotated frame with only vehicles
+    # Display the annotated frame with vehicles
     cv2.imshow('YOLOv8 Vehicle Detection with Entry/Exit Counting and Parking', annotated_frame)
 
     # Press 'q' to stop the video
