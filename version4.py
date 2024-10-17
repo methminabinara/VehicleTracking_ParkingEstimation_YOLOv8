@@ -16,6 +16,16 @@ if not cap.isOpened():
     print(f"Error: Could not open video {video_path}")
     exit()
 
+# Get video frame dimensions and frame rate
+frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+fps = int(cap.get(cv2.CAP_PROP_FPS))
+
+# Define the codec and create a VideoWriter object to save the output
+output_path = 'output_with_counts.mp4'
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec for mp4
+out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
+
 # Vehicle class IDs in the COCO dataset (ignore humans and other objects)
 vehicle_classes = [2, 3, 5, 7, 9]  # Car, Motorcycle, Bus, Truck, Bicycle
 
@@ -31,14 +41,26 @@ vehicle_tracker = {}
 stationary_threshold = 30  # Number of frames for a vehicle to be considered "parked"
 movement_tolerance = 5  # Tolerance for detecting movement (in pixels)
 
-# Function to check if a vehicle crosses the angled line from left to right (enter) or right to left (exit)
-def crossed_the_line(prev_pos, curr_pos, line_start, line_end):
-    def is_on_opposite_sides(p1, p2):
-        cross_product1 = np.cross(np.subtract(line_end, line_start), np.subtract(p1, line_start))
-        cross_product2 = np.cross(np.subtract(line_end, line_start), np.subtract(p2, line_start))
-        return np.sign(cross_product1) != np.sign(cross_product2)
+# Function to calculate the slope and intercept of the line
+def get_line_equation(line_start, line_end):
+    """Returns slope and intercept of the line formed by two points."""
+    x1, y1 = line_start
+    x2, y2 = line_end
+    if x2 - x1 != 0:
+        slope = (y2 - y1) / (x2 - x1)
+        intercept = y1 - slope * x1
+        return slope, intercept
+    else:
+        return None, None  # Vertical line case
 
-    return is_on_opposite_sides(prev_pos, curr_pos)
+# Function to check if a vehicle crosses the defined line
+def is_crossing_line(center, slope, intercept):
+    """Returns True if the vehicle's center has crossed the defined line."""
+    x, y = center
+    if slope is not None:
+        y_on_line = slope * x + intercept
+        return y < y_on_line
+    return False
 
 # Function to detect if the vehicle is stationary (parked)
 def is_parked(vehicle_history, threshold, tolerance):
@@ -56,6 +78,9 @@ def smooth_position(positions, alpha=0.2):
     smoothed_pos = (int(alpha * curr_pos[0] + (1 - alpha) * prev_pos[0]),
                     int(alpha * curr_pos[1] + (1 - alpha) * prev_pos[1]))
     return smoothed_pos
+
+# Calculate slope and intercept of the line
+slope, intercept = get_line_equation(line_start, line_end)
 
 # Process video frame by frame
 frame_count = 0
@@ -102,11 +127,11 @@ while cap.isOpened():
                 curr_pos = smooth_position([(center_x, center_y)], alpha=0.5)
                 vehicle_history.append(curr_pos)
 
-                # Check if the vehicle crosses the line (left-to-right is entering, right-to-left is exiting)
-                if crossed_the_line(prev_pos, curr_pos, line_start, line_end):
-                    if curr_pos[0] > prev_pos[0]:  # Moving left to right (entering)
+                # Check if the vehicle crosses the line
+                if is_crossing_line(prev_pos, slope, intercept) != is_crossing_line(curr_pos, slope, intercept):
+                    if curr_pos[0] > (line_start[0] + line_end[0]) // 2:  # Going right (enter)
                         enter_count += 1
-                    elif curr_pos[0] < prev_pos[0]:  # Moving right to left (exiting)
+                    else:  # Going left (exit)
                         exit_count += 1
 
                 # Check if the vehicle is parked (not moving for a set number of frames)
@@ -123,6 +148,9 @@ while cap.isOpened():
     cv2.putText(annotated_frame, f'Exits: {exit_count}', (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
     cv2.putText(annotated_frame, f'Parked: {parked_count}', (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
 
+    # Write the annotated frame to the output video file
+    out.write(annotated_frame)
+
     # Display the annotated frame with vehicles
     cv2.imshow('YOLOv8 Vehicle Detection with Entry/Exit Counting and Parking', annotated_frame)
 
@@ -132,8 +160,9 @@ while cap.isOpened():
 
     frame_count += 1
 
-# Release video capture when done
+# Release video capture and writer when done
 cap.release()
+out.release()
 
 # Close all OpenCV windows
 cv2.destroyAllWindows()
