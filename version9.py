@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import json
 from ultralytics import YOLO
-from tracker import Tracker
+from tracker2 import Tracker
 
 # Load YOLOv8 model
 model = YOLO('yolov8n.pt')
@@ -19,7 +19,7 @@ if not cap.isOpened():
     exit()
 
 # Initialize tracker and counts
-tracker = Tracker()
+tracker2 = Tracker()
 entry_count, exit_count = 0, 0
 
 # Class IDs for vehicles in COCO dataset
@@ -69,7 +69,7 @@ while cap.isOpened():
             vehicle_boxes.append([x1, y1, x2, y2, class_id])
 
     # Update tracker and get tracked boxes with IDs
-    tracked_boxes = tracker.update(vehicle_boxes)
+    tracked_boxes = tracker2.update(vehicle_boxes)
 
     # Draw entry/exit lines
     cv2.line(frame, line_start_red, line_end_red, (0, 0, 255), 3)  # Red for exit
