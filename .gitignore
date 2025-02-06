@@ -7,7 +7,6 @@ __pycache__/
 
 # Ignore logs and other text files
 *.log
-*.txt
 
 # Ignore large media files (if you have video/images you don’t want to push)
 *.mp4
