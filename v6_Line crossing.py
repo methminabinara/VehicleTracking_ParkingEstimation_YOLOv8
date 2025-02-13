@@ -26,8 +26,8 @@ entry_count, exit_count, parked_count = 0, 0, 0
 vehicle_classes = [2, 3, 5, 7, 9]  # Car, Motorcycle, Bus, Truck, Bicycle
 
 # Define the angled lines for counting vehicles (entry/exit lines)
-line_start_red, line_end_red = (100,300),(500,300)  # Red line (Exit)
-line_start_blue, line_end_blue = (1,350),(450,350)  # Blue line (Entry)
+line_start_red, line_end_red = (100, 300), (500, 300)  # Red line (Exit)
+line_start_blue, line_end_blue = (1, 350), (450, 350)  # Blue line (Entry)
 
 # Initialize tracking variables
 exit_tracking, entry_tracking = {}, {}
@@ -110,6 +110,11 @@ while cap.isOpened():
 # Release video capture and close windows
 cap.release()
 cv2.destroyAllWindows()
+
+# Save the counts to a text file
+with open('vehicle_counts.txt', 'w') as f:
+    f.write(f"Total vehicles entering: {entries}\n")
+    f.write(f"Total vehicles exiting: {exits}\n")
 
 print(f"Total vehicles entering: {entries}")
 print(f"Total vehicles exiting: {exits}")
