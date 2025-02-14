@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from ultralytics import YOLO
 from tracker import Tracker
+from datetime import timedelta
 
 # Load YOLOv8 model
 model = YOLO('yolov8n.pt')
@@ -18,8 +19,8 @@ if not cap.isOpened():
     print(f"Error: Could not open video {video_path}")
     exit()
 
-# Get video frame rate
-fps = cap.get(cv2.CAP_PROP_FPS)
+# Get video properties for timestamp calculation
+fps = int(cap.get(cv2.CAP_PROP_FPS))
 
 # Initialize tracker and counts
 tracker = Tracker()
@@ -35,8 +36,16 @@ line_start_blue, line_end_blue = (1, 350), (450, 350)  # Blue line (Entry)
 # Initialize tracking variables
 exit_tracking, entry_tracking = {}, {}
 exit_vehicles, entry_vehicles = [], []
-entry_times, exit_times = [], []
 frame_count = 0
+
+# Initialize lists to store entry and exit timestamps with vehicle IDs
+entry_timestamps = {}  # {vehicle_id: timestamp}
+exit_timestamps = {}   # {vehicle_id: timestamp}
+
+# Function to convert frame number to video time
+def frame_to_time(frame_num):
+    seconds = frame_num / fps
+    return str(timedelta(seconds=seconds))
 
 # Process video frame by frame
 while cap.isOpened():
@@ -45,6 +54,7 @@ while cap.isOpened():
         break
 
     frame_count += 1
+    current_time = frame_to_time(frame_count)
     frame = cv2.resize(frame, (1020, 500))
 
     # Perform YOLOv8 inference on the frame
@@ -75,32 +85,28 @@ while cap.isOpened():
         # Define offset for movement tolerance
         offset = 7
 
-        # Calculate video time
-        video_time = frame_count / fps
-        minutes = int(video_time // 60)
-        seconds = int(video_time % 60)
-        time_str = f"{minutes:02}:{seconds:02}"
-
         # Condition for vehicles moving upwards (entry)
         if line_start_blue[1] < (cy + offset) and line_start_blue[1] > (cy - offset):
             entry_tracking[vehicle_id] = cy
-            entry_times.append(time_str)
         if vehicle_id in entry_tracking:
             if line_start_red[1] < (cy + offset) and line_start_red[1] > (cy - offset):
                 cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
                 cv2.putText(frame, str(vehicle_id), (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
-                entry_vehicles.append(vehicle_id)
+                if vehicle_id not in entry_vehicles:
+                    entry_vehicles.append(vehicle_id)
+                    entry_timestamps[vehicle_id] = current_time  # Record entry time
                 del entry_tracking[vehicle_id]
 
         # Condition for vehicles moving downwards (exit)
         if line_start_red[1] < (cy + offset) and line_start_red[1] > (cy - offset):
             exit_tracking[vehicle_id] = cy
-            exit_times.append(time_str)
         if vehicle_id in exit_tracking:
             if line_start_blue[1] < (cy + offset) and line_start_blue[1] > (cy - offset):
                 cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
                 cv2.putText(frame, str(vehicle_id), (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
-                exit_vehicles.append(vehicle_id)
+                if vehicle_id not in exit_vehicles:
+                    exit_vehicles.append(vehicle_id)
+                    exit_timestamps[vehicle_id] = current_time  # Record exit time
                 del exit_tracking[vehicle_id]
 
     # Display entry, exit, and parked counts on the frame
@@ -123,16 +129,19 @@ while cap.isOpened():
 cap.release()
 cv2.destroyAllWindows()
 
-# Save the counts and times to a text file
-with open('vehicle_counts.txt', 'w') as f:
+# Save the counts and timestamps to a text file
+with open('vehicle_counts_and_times.txt', 'w') as f:
     f.write(f"Total vehicles entering: {entries}\n")
-    f.write(f"Total vehicles exiting: {exits}\n")
-    f.write("\nEntry Times:\n")
-    for time in entry_times:
-        f.write(f"{time}\n")
-    f.write("\nExit Times:\n")
-    for time in exit_times:
-        f.write(f"{time}\n")
+    f.write(f"Total vehicles exiting: {exits}\n\n")
+    
+    f.write("--- ENTRY TIMESTAMPS ---\n")
+    for vehicle_id in sorted(entry_timestamps.keys()):
+        f.write(f"Vehicle {vehicle_id} entered at: {entry_timestamps[vehicle_id]}\n")
+    
+    f.write("\n--- EXIT TIMESTAMPS ---\n")
+    for vehicle_id in sorted(exit_timestamps.keys()):
+        f.write(f"Vehicle {vehicle_id} exited at: {exit_timestamps[vehicle_id]}\n")
 
 print(f"Total vehicles entering: {entries}")
 print(f"Total vehicles exiting: {exits}")
+print(f"Entry and exit timestamps saved to 'vehicle_counts_and_times.txt'")
