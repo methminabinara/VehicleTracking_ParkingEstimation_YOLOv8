@@ -1,0 +1,39 @@
+Total vehicles entering: 14
+Total vehicles exiting: 10
+
+--- ENTRY DATA ---
+0:00:03.760000 - Car
+0:01:31.240000 - Truck
+0:02:48.480000 - Car
+0:03:08.120000 - Truck
+0:03:23.680000 - Car
+0:03:25.880000 - Car
+0:03:44.720000 - Car
+0:03:56.480000 - Car
+0:04:46.640000 - Car
+0:06:07.320000 - Car
+0:06:58.360000 - Car
+0:08:18.360000 - Car
+0:08:22.160000 - Car
+0:08:54.720000 - Car
+
+--- EXIT DATA ---
+0:00:37.840000 - Motorcycle
+0:03:25.880000 - Car
+0:03:26.480000 - Car
+0:03:44.600000 - Car
+0:04:42.080000 - Car
+0:05:58.680000 - Car
+0:06:51.720000 - Truck
+0:08:02.800000 - Truck
+0:08:12.040000 - Car
+0:08:38.960000 - Motorcycle
+
+--- ENTRY STATISTICS BY VEHICLE TYPE ---
+Car: 12
+Truck: 2
+
+--- EXIT STATISTICS BY VEHICLE TYPE ---
+Motorcycle: 2
+Car: 6
+Truck: 2
