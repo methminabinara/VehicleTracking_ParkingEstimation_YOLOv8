@@ -1,0 +1,7 @@
+Total vehicles entering: 1
+Total vehicles exiting: 0
+
+--- ENTRY TIMES ---
+0:00:03.760000
+
+--- EXIT TIMES ---

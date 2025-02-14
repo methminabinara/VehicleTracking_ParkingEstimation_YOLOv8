@@ -38,9 +38,9 @@ exit_tracking, entry_tracking = {}, {}
 exit_vehicles, entry_vehicles = [], []
 frame_count = 0
 
-# Initialize lists to store entry and exit timestamps with vehicle IDs
-entry_timestamps = {}  # {vehicle_id: timestamp}
-exit_timestamps = {}   # {vehicle_id: timestamp}
+# Lists to store entry and exit times
+entry_times = []
+exit_times = []
 
 # Function to convert frame number to video time
 def frame_to_time(frame_num):
@@ -89,24 +89,24 @@ while cap.isOpened():
         if line_start_blue[1] < (cy + offset) and line_start_blue[1] > (cy - offset):
             entry_tracking[vehicle_id] = cy
         if vehicle_id in entry_tracking:
-            if line_start_red[1] < (cy + offset) and line_start_red[1] > (cy - offset):
+            if line_start_red[1] <(cy + offset) and line_start_red[1] > (cy - offset):
                 cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
                 cv2.putText(frame, str(vehicle_id), (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
                 if vehicle_id not in entry_vehicles:
                     entry_vehicles.append(vehicle_id)
-                    entry_timestamps[vehicle_id] = current_time  # Record entry time
+                    entry_times.append(current_time)  # Record entry time
                 del entry_tracking[vehicle_id]
 
         # Condition for vehicles moving downwards (exit)
-        if line_start_red[1] < (cy + offset) and line_start_red[1] > (cy - offset):
+        if line_start_red[1] <(cy + offset) and line_start_red[1] > (cy - offset):
             exit_tracking[vehicle_id] = cy
         if vehicle_id in exit_tracking:
-            if line_start_blue[1] < (cy + offset) and line_start_blue[1] > (cy - offset):
+            if line_start_blue[1] <(cy + offset) and line_start_blue[1] > (cy - offset):
                 cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
                 cv2.putText(frame, str(vehicle_id), (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
                 if vehicle_id not in exit_vehicles:
                     exit_vehicles.append(vehicle_id)
-                    exit_timestamps[vehicle_id] = current_time  # Record exit time
+                    exit_times.append(current_time)  # Record exit time
                 del exit_tracking[vehicle_id]
 
     # Display entry, exit, and parked counts on the frame
@@ -129,19 +129,19 @@ while cap.isOpened():
 cap.release()
 cv2.destroyAllWindows()
 
-# Save the counts and timestamps to a text file
-with open('vehicle_counts_and_times.txt', 'w') as f:
+# Save the counts and times to a text file
+with open('vehicle_times.txt', 'w') as f:
     f.write(f"Total vehicles entering: {entries}\n")
     f.write(f"Total vehicles exiting: {exits}\n\n")
     
-    f.write("--- ENTRY TIMESTAMPS ---\n")
-    for vehicle_id in sorted(entry_timestamps.keys()):
-        f.write(f"Vehicle {vehicle_id} entered at: {entry_timestamps[vehicle_id]}\n")
+    f.write("--- ENTRY TIMES ---\n")
+    for i, time_stamp in enumerate(entry_times, 1):
+        f.write(f"{time_stamp}\n")
     
-    f.write("\n--- EXIT TIMESTAMPS ---\n")
-    for vehicle_id in sorted(exit_timestamps.keys()):
-        f.write(f"Vehicle {vehicle_id} exited at: {exit_timestamps[vehicle_id]}\n")
+    f.write("\n--- EXIT TIMES ---\n")
+    for i, time_stamp in enumerate(exit_times, 1):
+        f.write(f"{time_stamp}\n")
 
 print(f"Total vehicles entering: {entries}")
 print(f"Total vehicles exiting: {exits}")
-print(f"Entry and exit timestamps saved to 'vehicle_counts_and_times.txt'")
+print(f"Entry and exit times saved to 'vehicle_times.txt'")
