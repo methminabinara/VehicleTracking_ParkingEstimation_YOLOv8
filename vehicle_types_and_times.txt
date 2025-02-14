@@ -1,0 +1,12 @@
+Total vehicles entering: 1
+Total vehicles exiting: 0
+
+--- ENTRY DATA ---
+0:00:03.760000 - Car
+
+--- EXIT DATA ---
+
+--- ENTRY STATISTICS BY VEHICLE TYPE ---
+Car: 1
+
+--- EXIT STATISTICS BY VEHICLE TYPE ---
