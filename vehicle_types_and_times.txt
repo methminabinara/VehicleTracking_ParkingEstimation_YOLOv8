@@ -1,12 +1,14 @@
 Total vehicles entering: 1
-Total vehicles exiting: 0
+Total vehicles exiting: 1
 
 --- ENTRY DATA ---
 0:00:03.760000 - Car
 
 --- EXIT DATA ---
+0:00:37.840000 - Motorcycle
 
 --- ENTRY STATISTICS BY VEHICLE TYPE ---
 Car: 1
 
 --- EXIT STATISTICS BY VEHICLE TYPE ---
+Motorcycle: 1
